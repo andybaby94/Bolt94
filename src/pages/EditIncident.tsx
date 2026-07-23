@@ -11,7 +11,7 @@ import {
   ROLE_LABELS,
   TIME_PERIODS_ROW1,
   TIME_PERIODS_ROW2,
-  PERIODS_WITH_BREAK,
+  BREAKABLE_PERIODS,
   buildTimePeriod,
   parseTimePeriod,
   parseIncidentTypes,
@@ -33,6 +33,7 @@ export function EditIncident() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const [occurredAt, setOccurredAt] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
@@ -46,7 +47,7 @@ export function EditIncident() {
   const [linkedStudents, setLinkedStudents] = useState<LinkedStudent[]>([]);
   const [roleWarning, setRoleWarning] = useState(false);
 
-  const canBreak = selectedPeriod !== null && PERIODS_WITH_BREAK.includes(selectedPeriod);
+  const canBreak = selectedPeriod !== null && BREAKABLE_PERIODS.includes(selectedPeriod);
 
   useEffect(() => {
     if (!canBreak) setIsBreak(false);
@@ -138,12 +139,13 @@ export function EditIncident() {
     }
 
     setSaving(true);
+    setSaveError(false);
 
     const finalLocation = location === '기타' && customLocation.trim() ? customLocation.trim() : location;
     const timePeriod = buildTimePeriod(selectedPeriod, isBreak);
     const incidentType = selectedTypes.length > 0 ? selectedTypes.join(', ') : '기타';
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('incidents')
       .update({
         occurred_at: kstLocalToISO(occurredAt),
@@ -156,19 +158,42 @@ export function EditIncident() {
       })
       .eq('id', id);
 
-    await supabase.from('incident_students').delete().eq('incident_id', id);
+    if (updateError) {
+      setSaving(false);
+      setSaveError(true);
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from('incident_students')
+      .delete()
+      .eq('incident_id', id);
+
+    if (deleteError) {
+      setSaving(false);
+      setSaveError(true);
+      return;
+    }
+
     if (linkedStudents.length > 0) {
-      await supabase.from('incident_students').insert(
-        linkedStudents.map((ls) => ({
-          incident_id: id,
-          student_id: ls.student.id,
-          role: ls.role,
-        }))
-      );
+      const { error: insertError } = await supabase
+        .from('incident_students')
+        .insert(
+          linkedStudents.map((ls) => ({
+            incident_id: id,
+            student_id: ls.student.id,
+            role: ls.role,
+          }))
+        );
+      if (insertError) {
+        setSaving(false);
+        setSaveError(true);
+        return;
+      }
     }
 
     setSaving(false);
-    navigate(`/incidents/${id}`);
+    navigate(`/incidents/${id}`, { replace: true });
   }
 
   if (loading) {
@@ -440,6 +465,12 @@ export function EditIncident() {
           <Check size={18} />
           {saving ? '저장 중...' : '수정 저장'}
         </button>
+        {saveError && (
+          <div className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+            <AlertCircle size={14} />
+            저장 중 오류가 발생했습니다. 다시 시도해주세요.
+          </div>
+        )}
       </div>
     </div>
   );

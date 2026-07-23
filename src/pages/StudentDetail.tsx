@@ -23,6 +23,7 @@ const ROLE_FILTERS: { value: string; label: string }[] = [
   { value: 'actor', label: '행동학생' },
   { value: 'victim', label: '피해학생' },
   { value: 'witness', label: '목격학생' },
+  { value: 'other', label: '기타' },
 ];
 
 const ACTION_FILTERS: { value: string; label: string }[] = [

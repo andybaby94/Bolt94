@@ -11,7 +11,7 @@ import {
   ROLE_LABELS,
   TIME_PERIODS_ROW1,
   TIME_PERIODS_ROW2,
-  PERIODS_WITH_BREAK,
+  BREAKABLE_PERIODS,
   buildTimePeriod,
   type Student,
 } from '@/lib/supabase';
@@ -40,7 +40,7 @@ export function NewIncident() {
   const [saving, setSaving] = useState(false);
   const [roleWarning, setRoleWarning] = useState(false);
 
-  const canBreak = selectedPeriod !== null && PERIODS_WITH_BREAK.includes(selectedPeriod);
+  const canBreak = selectedPeriod !== null && BREAKABLE_PERIODS.includes(selectedPeriod);
 
   useEffect(() => {
     if (!canBreak) setIsBreak(false);

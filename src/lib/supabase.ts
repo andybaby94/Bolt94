@@ -67,8 +67,6 @@ export const TIME_PERIODS_ROW2 = ['아침시간', '점심시간', '하교시간'
 
 export const PERIODS_WITH_BREAK = ['아침시간', '1교시', '2교시', '3교시', '4교시', '5교시', '6교시'];
 
-export const BREAKABLE_PERIODS = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시'];
-
 export function buildTimePeriod(period: string | null, isBreak: boolean): string | null {
   if (!period) return null;
   if (isBreak && PERIODS_WITH_BREAK.includes(period)) {

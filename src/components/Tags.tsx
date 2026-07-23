@@ -1,7 +1,7 @@
 import { ROLE_LABELS } from '@/lib/supabase';
 import type { IncidentStudent } from '@/lib/supabase';
 
-export const ROLE_STYLES: Record<string, string> = {
+const ROLE_STYLES: Record<string, string> = {
   actor: 'bg-red-50 text-red-700 border-red-200',
   victim: 'bg-blue-50 text-blue-700 border-blue-200',
   witness: 'bg-green-50 text-green-700 border-green-200',

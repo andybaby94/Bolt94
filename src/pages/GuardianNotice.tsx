@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Printer } from 'lucide-react';
 import {
   supabase,
   ROLE_LABELS,
   type IncidentWithStudents,
 } from '@/lib/supabase';
 import { formatDateTime } from '@/components/IncidentCard';
-import { PageHeader } from '@/components/PageHeader';
 
 export function GuardianNotice() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [incident, setIncident] = useState<IncidentWithStudents | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,19 +54,25 @@ export function GuardianNotice() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <PageHeader
-        title="보호자 통지서"
-        rightSlot={
+      <div className="no-print mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: '#1e3a5f' }}
+            onClick={() => navigate(-1)}
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
           >
-            <Printer size={16} />
-            인쇄
+            <ArrowLeft size={20} />
           </button>
-        }
-      />
+          <h1 className="text-lg font-bold text-gray-800">보호자 통지서</h1>
+        </div>
+        <button
+          onClick={handlePrint}
+          className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
+          style={{ backgroundColor: '#1e3a5f' }}
+        >
+          <Printer size={16} />
+          인쇄
+        </button>
+      </div>
 
       <div className="print-area rounded-xl border border-gray-200 bg-white p-8">
         <div className="mb-6 text-center">

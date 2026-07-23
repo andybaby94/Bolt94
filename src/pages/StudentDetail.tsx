@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { ArrowLeft, Search, X } from 'lucide-react';
 import {
   supabase,
   type Student,
   type IncidentWithStudents,
 } from '@/lib/supabase';
 import { IncidentCard } from '@/components/IncidentCard';
-import { PageHeader } from '@/components/PageHeader';
 
 type Stats = {
   total: number;
@@ -23,7 +22,6 @@ const ROLE_FILTERS: { value: string; label: string }[] = [
   { value: 'actor', label: '행동학생' },
   { value: 'victim', label: '피해학생' },
   { value: 'witness', label: '목격학생' },
-  { value: 'other', label: '기타' },
 ];
 
 const ACTION_FILTERS: { value: string; label: string }[] = [
@@ -169,7 +167,15 @@ export function StudentDetail() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <PageHeader title="학생 상세" />
+      <div className="mb-4 flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-lg font-bold text-gray-800">학생 상세</h1>
+      </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
         <div className="flex items-baseline gap-2">
@@ -307,12 +313,7 @@ export function StudentDetail() {
               <IncidentCard
                 key={inc.id}
                 incident={inc}
-                onClick={() =>
-                  navigate(`/incidents/${inc.id}`, {
-                    state: { fromStudentId: id },
-                  })
-                }
-                highlightKeyword={searchKeyword}
+                onClick={() => navigate(`/incidents/${inc.id}`)}
               />
             ))}
           </div>

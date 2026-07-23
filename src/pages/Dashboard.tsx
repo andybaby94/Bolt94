@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronRight } from 'lucide-react';
-import { supabase, type IncidentWithStudents } from '@/lib/supabase';
+import { Search, Plus, ChevronRight } from 'lucide-react';
+import { supabase, type IncidentWithStudents, type Student } from '@/lib/supabase';
 import { isTodayKST } from '@/lib/datetime';
 import { IncidentCard } from '@/components/IncidentCard';
-import { StudentSearchInput } from '@/components/StudentSearchInput';
 
 function isToday(iso: string): boolean {
   return isTodayKST(iso);
@@ -12,6 +11,9 @@ function isToday(iso: string): boolean {
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Student[]>([]);
+  const [showResults, setShowResults] = useState(false);
   const [todayIncidents, setTodayIncidents] = useState<IncidentWithStudents[]>([]);
   const [recentIncidents, setRecentIncidents] = useState<IncidentWithStudents[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +35,60 @@ export function Dashboard() {
     loadData();
   }, []);
 
+  async function handleSearch(value: string) {
+    setQuery(value);
+    if (value.trim().length === 0) {
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+    const { data } = await supabase
+      .from('students')
+      .select('*')
+      .ilike('name', `%${value.trim()}%`)
+      .limit(10);
+    setResults((data ?? []) as Student[]);
+    setShowResults(true);
+  }
+
+  function selectStudent(s: Student) {
+    setQuery('');
+    setShowResults(false);
+    setResults([]);
+    navigate(`/students/${s.id}`);
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <StudentSearchInput
-        onSelect={(s) => navigate(`/students/${s.id}`)}
-        placeholder="학생 이름 검색"
-      />
+      <div className="relative">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => results.length > 0 && setShowResults(true)}
+            onBlur={() => setTimeout(() => setShowResults(false), 150)}
+            placeholder="학생 이름 검색"
+            className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-navy-400 focus:ring-1 focus:ring-navy-400"
+          />
+        </div>
+        {showResults && results.length > 0 && (
+          <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+            {results.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => selectStudent(s)}
+                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-gray-50"
+              >
+                <span className="font-medium text-gray-800">{s.name}</span>
+                <span className="text-xs text-gray-500">
+                  {s.grade}학년 {s.class_number}반 {s.student_number}번
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <button
         onClick={() => navigate('/incidents/new')}

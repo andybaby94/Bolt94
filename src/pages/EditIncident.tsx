@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Search, X, Check } from 'lucide-react';
+import { X, Check, AlertCircle } from 'lucide-react';
 import {
   supabase,
   INCIDENT_TYPES,
@@ -19,6 +19,8 @@ import {
   type IncidentWithStudents,
 } from '@/lib/supabase';
 import { kstLocalToISO, isoToKSTLocal } from '@/lib/datetime';
+import { PageHeader } from '@/components/PageHeader';
+import { StudentSearchInput } from '@/components/StudentSearchInput';
 
 type LinkedStudent = {
   student: Student;
@@ -40,10 +42,8 @@ export function EditIncident() {
   const [description, setDescription] = useState('');
   const [actionType, setActionType] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState('');
-  const [studentQuery, setStudentQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Student[]>([]);
-  const [showResults, setShowResults] = useState(false);
   const [linkedStudents, setLinkedStudents] = useState<LinkedStudent[]>([]);
+  const [roleWarning, setRoleWarning] = useState(false);
 
   const canBreak = selectedPeriod !== null && PERIODS_WITH_BREAK.includes(selectedPeriod);
 
@@ -94,38 +94,21 @@ export function EditIncident() {
     })();
   }, [id]);
 
-  async function handleStudentSearch(value: string) {
-    setStudentQuery(value);
-    if (value.trim().length === 0) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-    const { data } = await supabase
-      .from('students')
-      .select('*')
-      .ilike('name', `%${value.trim()}%`)
-      .limit(10);
-    setSearchResults((data ?? []) as Student[]);
-    setShowResults(true);
-  }
-
-  function addStudent(student: Student, role: string) {
-    if (linkedStudents.some((ls) => ls.student.id === student.id && ls.role === role)) return;
-    setLinkedStudents([...linkedStudents, { student, role }]);
-    setStudentQuery('');
-    setSearchResults([]);
-    setShowResults(false);
+  function addStudent(student: Student) {
+    if (linkedStudents.some((ls) => ls.student.id === student.id)) return;
+    setLinkedStudents([...linkedStudents, { student, role: '' }]);
+    setRoleWarning(false);
   }
 
   function removeStudent(idx: number) {
     setLinkedStudents(linkedStudents.filter((_, i) => i !== idx));
   }
 
-  function changeRole(idx: number, newRole: string) {
+  function changeRole(idx: number, role: string) {
     setLinkedStudents(
-      linkedStudents.map((ls, i) => (i === idx ? { ...ls, role: newRole } : ls))
+      linkedStudents.map((ls, i) => (i === idx ? { ...ls, role } : ls))
     );
+    setRoleWarning(false);
   }
 
   function toggleType(type: string) {
@@ -146,6 +129,13 @@ export function EditIncident() {
 
   async function handleSubmit() {
     if (description.trim().length === 0 || !id) return;
+
+    const unassigned = linkedStudents.some((ls) => !ls.role);
+    if (unassigned) {
+      setRoleWarning(true);
+      return;
+    }
+
     setSaving(true);
 
     const finalLocation = location === '기타' && customLocation.trim() ? customLocation.trim() : location;
@@ -190,15 +180,7 @@ export function EditIncident() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold text-gray-800">사건 수정</h1>
-      </div>
+      <PageHeader title="사건 수정" />
 
       <div className="space-y-4">
         <div>
@@ -389,66 +371,51 @@ export function EditIncident() {
 
         <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">관련 학생</label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              value={studentQuery}
-              onChange={(e) => handleStudentSearch(e.target.value)}
-              onFocus={() => searchResults.length > 0 && setShowResults(true)}
-              onBlur={() => setTimeout(() => setShowResults(false), 150)}
-              placeholder="학생 이름 검색"
-              className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-navy-400"
-            />
-            {showResults && searchResults.length > 0 && (
-              <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-                {searchResults.map((s) => (
-                  <div key={s.id} className="border-b border-gray-100 last:border-0">
-                    <div className="flex items-center justify-between px-4 py-2">
-                      <span className="text-sm font-medium text-gray-800">{s.name}</span>
-                      <span className="text-xs text-gray-500">
-                        {s.grade}학년 {s.class_number}반 {s.student_number}번
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1 px-4 pb-2">
-                      {ROLES.map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => addStudent(s, r)}
-                          className="rounded-md border border-gray-200 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
-                        >
-                          {ROLE_LABELS[r]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <StudentSearchInput
+            onSelect={addStudent}
+            placeholder="학생 이름 검색 후 Enter 또는 클릭하여 추가"
+            excludeIds={linkedStudents.map((ls) => ls.student.id)}
+          />
+
+          {roleWarning && (
+            <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <AlertCircle size={14} />
+              역할이 선택되지 않은 학생이 있습니다. 역할을 선택해주세요.
+            </div>
+          )}
 
           {linkedStudents.length > 0 && (
             <div className="mt-2 space-y-1.5">
               {linkedStudents.map((ls, idx) => (
                 <div
-                  key={`${ls.student.id}-${ls.role}-${idx}`}
+                  key={`${ls.student.id}-${idx}`}
                   className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <span className="text-sm text-gray-800">
                       {ls.student.name}
                       <span className="ml-1 text-xs text-gray-400">
                         ({ls.student.grade}학년 {ls.student.class_number}반 {ls.student.student_number}번)
                       </span>
                     </span>
-                    <select
-                      value={ls.role}
-                      onChange={(e) => changeRole(idx, e.target.value)}
-                      className="rounded-md border border-gray-200 px-1.5 py-0.5 text-xs text-gray-700 outline-none focus:border-navy-400"
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                      ))}
-                    </select>
+                    <div className="flex flex-wrap gap-1">
+                      {ROLES.map((r) => {
+                        const active = ls.role === r;
+                        return (
+                          <button
+                            key={r}
+                            onClick={() => changeRole(idx, r)}
+                            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+                              active
+                                ? 'border-navy-600 bg-navy-600 text-white'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {ROLE_LABELS[r]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <button
                     onClick={() => removeStudent(idx)}

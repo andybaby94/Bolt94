@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { supabase, type Student } from '@/lib/supabase';
+import { PageHeader } from '@/components/PageHeader';
 
 export function StudentList() {
   const navigate = useNavigate();
@@ -28,15 +29,7 @@ export function StudentList() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate('/')}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold text-gray-800">학생 조회</h1>
-      </div>
+      <PageHeader title="학생 조회" />
 
       <div className="relative mb-4">
         <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />

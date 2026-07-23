@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, FileText, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Pencil, Trash2 } from 'lucide-react';
 import {
   supabase,
   type IncidentWithStudents,
 } from '@/lib/supabase';
 import { formatDateTime } from '@/components/IncidentCard';
 import { StudentTag, ActionTag } from '@/components/Tags';
+import { PageHeader } from '@/components/PageHeader';
 
 export function IncidentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -57,15 +58,7 @@ export function IncidentDetail() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold text-gray-800">사건 상세</h1>
-      </div>
+      <PageHeader title="사건 상세" />
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">

@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import {
   supabase,
   type Student,
   type IncidentWithStudents,
 } from '@/lib/supabase';
 import { IncidentCard } from '@/components/IncidentCard';
+import { PageHeader } from '@/components/PageHeader';
 
 type Stats = {
   total: number;
@@ -167,15 +168,7 @@ export function StudentDetail() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold text-gray-800">학생 상세</h1>
-      </div>
+      <PageHeader title="학생 상세" />
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
         <div className="flex items-baseline gap-2">
@@ -314,6 +307,7 @@ export function StudentDetail() {
                 key={inc.id}
                 incident={inc}
                 onClick={() => navigate(`/incidents/${inc.id}`)}
+                highlightKeyword={searchKeyword}
               />
             ))}
           </div>

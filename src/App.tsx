@@ -1,43 +1,23 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { Dashboard } from '@/pages/Dashboard';
-import { NewIncident } from '@/pages/NewIncident';
-import { IncidentDetail } from '@/pages/IncidentDetail';
-import { StudentList } from '@/pages/StudentList';
-import { StudentDetail } from '@/pages/StudentDetail';
-import { GuardianNotice } from '@/pages/GuardianNotice';
+import { Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout'
+import Home from './pages/Home'
+import IncidentRecord from './pages/IncidentRecord'
+import StudentLookup from './pages/StudentLookup'
+import StudentDetail from './pages/StudentDetail'
+import IncidentDetail from './pages/IncidentDetail'
+import AllIncidents from './pages/AllIncidents'
 
-function Header() {
-  const navigate = useNavigate();
+export default function App() {
   return (
-    <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-      <div className="mx-auto max-w-2xl px-4 py-3">
-        <button
-          onClick={() => navigate('/')}
-          className="text-base font-bold text-gray-800"
-        >
-          학생 생활안전 관리 시스템
-        </button>
-      </div>
-    </header>
-  );
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/incidents/new" element={<IncidentRecord />} />
+        <Route path="/incidents/all" element={<AllIncidents />} />
+        <Route path="/incidents/:id" element={<IncidentDetail />} />
+        <Route path="/students" element={<StudentLookup />} />
+        <Route path="/students/:id" element={<StudentDetail />} />
+      </Routes>
+    </Layout>
+  )
 }
-
-function App() {
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/incidents/new" element={<NewIncident />} />
-          <Route path="/incidents/:id" element={<IncidentDetail />} />
-          <Route path="/incidents/:id/notice" element={<GuardianNotice />} />
-          <Route path="/students" element={<StudentList />} />
-          <Route path="/students/:id" element={<StudentDetail />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
-  );
-}
-
-export default App;

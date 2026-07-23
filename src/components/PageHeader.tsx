@@ -1,43 +1,33 @@
+import { Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Home } from 'lucide-react';
 
 export function PageHeader({
   title,
-  showBack = true,
-  showHome = true,
-  rightSlot,
+  subtitle,
+  children,
 }: {
   title: string;
-  showBack?: boolean;
-  showHome?: boolean;
-  rightSlot?: React.ReactNode;
+  subtitle?: string;
+  children?: React.ReactNode;
 }) {
   const navigate = useNavigate();
-
   return (
-    <div className="mb-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        {showBack && (
-          <button
-            onClick={() => navigate(-1)}
-            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100"
-          >
-            <ArrowLeft size={20} />
-          </button>
-        )}
-        <h1 className="text-lg font-bold text-gray-800">{title}</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        {rightSlot}
-        {showHome && (
+    <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+        <div>
+          <h1 className="text-lg font-bold text-navy-700">{title}</h1>
+          {subtitle && <p className="mt-0.5 text-xs text-gray-500">{subtitle}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          {children}
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
+            className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:border-navy-300 hover:text-navy-600"
           >
-            <Home size={14} />
+            <Home size={16} />
             홈
           </button>
-        )}
+        </div>
       </div>
     </div>
   );

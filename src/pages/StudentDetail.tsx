@@ -1,22 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import { ActionTag } from '@/components/Tags';
 import {
   supabase,
+  formatDateTime,
+  ROLE_LABELS,
+  ROLE_STYLES,
   type Student,
   type IncidentWithStudents,
 } from '@/lib/supabase';
-import { IncidentCard } from '@/components/IncidentCard';
-import { PageHeader } from '@/components/PageHeader';
-
-type Stats = {
-  total: number;
-  actor: number;
-  victim: number;
-  witness: number;
-  other: number;
-  actions: Record<string, number>;
-};
 
 const ROLE_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: '전체' },
@@ -26,315 +20,195 @@ const ROLE_FILTERS: { value: string; label: string }[] = [
   { value: 'other', label: '기타' },
 ];
 
-const ACTION_FILTERS: { value: string; label: string }[] = [
-  { value: 'all', label: '전체' },
-  { value: 'none', label: '없음' },
-  { value: '단순지도', label: '단순지도' },
-  { value: '개별상담', label: '개별상담' },
-  { value: '제1호-가목', label: '제1호-가목' },
-  { value: '제1호-나목', label: '제1호-나목' },
-  { value: '제2호-가목', label: '제2호-가목' },
-  { value: '제2호-나목', label: '제2호-나목' },
-];
-
-const LEGACY_ACTION_MAP: Record<string, string> = {
-  '1호': '제1호-가목',
-  '2호': '제2호-가목',
-  '3호': '제2호-나목',
+type StudentIncident = IncidentWithStudents & {
+  incident_students: { id: string; role: string; student: Student }[];
 };
-
-function normalizeActionType(raw: string | null): string {
-  if (raw === null || raw === '없음') return 'none';
-  if (LEGACY_ACTION_MAP[raw]) return LEGACY_ACTION_MAP[raw];
-  return raw;
-}
 
 export function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [student, setStudent] = useState<Student | null>(null);
-  const [incidents, setIncidents] = useState<IncidentWithStudents[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [incidents, setIncidents] = useState<StudentIncident[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [actionFilter, setActionFilter] = useState<string>('all');
-  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const { data: s } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-      setStudent(s as Student | null);
+      const { data: s } = await supabase.from('students').select('*').eq('id', id).single();
+      setStudent(s as Student);
 
-      const { data: iStu } = await supabase
-        .from('incident_students')
-        .select('incident_id, role')
-        .eq('student_id', id);
+      const { data: incData } = await supabase
+        .from('incidents')
+        .select('*, incident_students(*, student:students(*))')
+        .in(
+          'id',
+          (
+            await supabase.from('incident_students').select('incident_id').eq('student_id', id)
+          ).data?.map((r) => r.incident_id) ?? [],
+        )
+        .order('occurred_at', { ascending: false });
 
-      const links = iStu ?? [];
-      const incIds = links.map((l: { incident_id: string }) => l.incident_id);
-
-      let incs: IncidentWithStudents[] = [];
-      if (incIds.length > 0) {
-        const { data: incData } = await supabase
-          .from('incidents')
-          .select('*, incident_students(*, student:students(*))')
-          .in('id', incIds)
-          .order('occurred_at', { ascending: false });
-        incs = (incData ?? []) as IncidentWithStudents[];
-      }
-      setIncidents(incs);
-
-      const s2: Stats = {
-        total: links.length,
-        actor: links.filter((l: { role: string }) => l.role === 'actor').length,
-        victim: links.filter((l: { role: string }) => l.role === 'victim').length,
-        witness: links.filter((l: { role: string }) => l.role === 'witness').length,
-        other: links.filter((l: { role: string }) => l.role === 'other').length,
-        actions: {},
-      };
-      for (const inc of incs) {
-        if (inc.action_type) {
-          s2.actions[inc.action_type] = (s2.actions[inc.action_type] ?? 0) + 1;
-        }
-      }
-      setStats(s2);
+      setIncidents((incData as unknown as StudentIncident[]) ?? []);
       setLoading(false);
     })();
   }, [id]);
 
-  const roleMap = useMemo(() => {
-    const m = new Map<string, string>();
+  const roleStats = useMemo(() => {
+    const stats: Record<string, number> = { actor: 0, victim: 0, witness: 0, other: 0 };
     for (const inc of incidents) {
-      for (const is of inc.incident_students ?? []) {
-        if (is.student_id === id) {
-          m.set(inc.id, is.role);
+      for (const is of inc.incident_students) {
+        if (is.student?.id === id && stats[is.role] !== undefined) {
+          stats[is.role]++;
         }
       }
     }
-    return m;
+    return stats;
+  }, [incidents, id]);
+
+  const actionCount = useMemo(() => {
+    const set = new Set<string>();
+    for (const inc of incidents) {
+      if (inc.action_type) {
+        for (const is of inc.incident_students) {
+          if (is.student?.id === id) {
+            set.add(inc.id);
+            break;
+          }
+        }
+      }
+    }
+    return set.size;
   }, [incidents, id]);
 
   const filteredIncidents = useMemo(() => {
-    return incidents.filter((inc) => {
-      if (roleFilter !== 'all') {
-        const role = roleMap.get(inc.id);
-        if (role !== roleFilter) return false;
-      }
-
-      if (actionFilter !== 'all') {
-        const normalized = normalizeActionType(inc.action_type);
-        if (normalized !== actionFilter) return false;
-      }
-
-      if (searchKeyword.trim().length > 0) {
-        const kw = searchKeyword.trim().toLowerCase();
-        const desc = (inc.description ?? '').toLowerCase();
-        const note = (inc.action_note ?? '').toLowerCase();
-        if (!desc.includes(kw) && !note.includes(kw)) return false;
-      }
-
-      return true;
-    });
-  }, [incidents, roleFilter, actionFilter, searchKeyword, roleMap]);
-
-  const hasActiveFilter = roleFilter !== 'all' || actionFilter !== 'all' || searchKeyword.trim().length > 0;
-
-  function resetFilters() {
-    setRoleFilter('all');
-    setActionFilter('all');
-    setSearchKeyword('');
-  }
+    if (roleFilter === 'all') return incidents;
+    return incidents.filter((inc) =>
+      inc.incident_students.some((is) => is.student?.id === id && is.role === roleFilter),
+    );
+  }, [incidents, roleFilter, id]);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl px-4 pt-10 text-center text-sm text-gray-400">
-        불러오는 중...
+      <div className="min-h-screen bg-gray-50">
+        <PageHeader title="학생 상세" />
+        <div className="p-8 text-center text-sm text-gray-400">불러오는 중...</div>
       </div>
     );
   }
 
   if (!student) {
     return (
-      <div className="mx-auto max-w-2xl px-4 pt-10 text-center text-sm text-gray-400">
-        학생을 찾을 수 없습니다.
+      <div className="min-h-screen bg-gray-50">
+        <PageHeader title="학생 상세" />
+        <div className="p-8 text-center text-sm text-gray-400">학생을 찾을 수 없습니다.</div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <PageHeader title="학생 상세" />
+    <div className="min-h-screen bg-gray-50">
+      <PageHeader title={student.name} subtitle={`${student.grade}학년 ${student.class_number}반 ${student.student_number}번`}>
+        <button
+          onClick={() => navigate('/students')}
+          className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:border-navy-300 hover:text-navy-600"
+        >
+          <ArrowLeft size={16} />
+          목록
+        </button>
+      </PageHeader>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-xl font-bold text-gray-800">{student.name}</h2>
-          <span className="text-sm text-gray-500">
-            {student.grade}학년 {student.class_number}반 {student.student_number}번
-          </span>
-        </div>
-      </div>
-
-      {stats && (
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <StatCard label="전체 사건" value={stats.total} />
-          <StatCard label="행동학생" value={stats.actor} color="text-red-600" />
-          <StatCard label="피해학생" value={stats.victim} color="text-blue-600" />
-          <StatCard label="목격학생" value={stats.witness} color="text-green-600" />
-        </div>
-      )}
-
-      {stats && Object.keys(stats.actions).length > 0 && (
-        <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4">
-          <p className="mb-2 text-xs font-medium text-gray-500">조치 누적</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(stats.actions).map(([type, count]) => (
-              <span
-                key={type}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-white"
-                style={{ backgroundColor: '#1e3a5f' }}
-              >
-                {type} ({count})
-              </span>
-            ))}
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+            <p className="text-xs text-gray-400">전체 사건</p>
+            <p className="mt-1 text-2xl font-bold text-navy-700">{incidents.length}</p>
           </div>
+          {ROLE_FILTERS.slice(1).map((r) => (
+            <div key={r.value} className="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-sm">
+              <p className="text-xs text-gray-400">{r.label}</p>
+              <p className="mt-1 text-2xl font-bold text-navy-700">{roleStats[r.value] ?? 0}</p>
+            </div>
+          ))}
         </div>
-      )}
 
-      {/* 관련 사건 기록 + 필터 */}
-      <section className="mt-5">
-        <h3 className="mb-2 text-sm font-semibold text-gray-700">
-          관련 사건 기록
-          <span className="ml-1.5 text-gray-400">
-            ({filteredIncidents.length}
-            {hasActiveFilter && ` / ${incidents.length}`})
-          </span>
-        </h3>
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-xs text-gray-400">조치 누적 횟수</p>
+          <p className="mt-1 text-2xl font-bold text-navy-700">{actionCount}</p>
+        </div>
 
-        {/* 필터 영역 */}
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white p-3">
-          {/* 역할 필터 */}
-          <div className="mb-2">
-            <p className="mb-1 text-xs font-medium text-gray-500">역할</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ROLE_FILTERS.map((f) => {
-              const active = roleFilter === f.value;
+        <div className="mb-4">
+          <h2 className="mb-3 text-base font-bold text-navy-700">관련 사건 기록</h2>
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {ROLE_FILTERS.map((r) => {
+              const active = roleFilter === r.value;
+              const activeStyle = ROLE_STYLES[r.value] ?? 'border-navy-600 bg-navy-600 text-white';
               return (
                 <button
-                  key={f.value}
-                  onClick={() => setRoleFilter(f.value)}
-                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                  key={r.value}
+                  onClick={() => setRoleFilter(r.value)}
+                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
                     active
-                      ? 'border-navy-600 bg-navy-600 text-white'
+                      ? activeStyle
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
                 >
-                  {f.label}
+                  {r.label}
                 </button>
               );
+            })}
+          </div>
+
+          {filteredIncidents.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-400">
+              관련 사건 기록이 없습니다.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredIncidents.map((inc) => {
+                const myRole = inc.incident_students.find((is) => is.student?.id === id)?.role;
+                return (
+                  <button
+                    key={inc.id}
+                    onClick={() =>
+                      navigate(`/incidents/${inc.id}`, {
+                        state: { fromStudentId: id },
+                      })
+                    }
+                    className="block w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-navy-300 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{inc.description}</p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          {formatDateTime(inc.occurred_at)} · {inc.location} · {inc.time_period ?? ''}
+                        </p>
+                      </div>
+                      <div className="ml-2 flex items-center gap-1.5">
+                        {myRole && (
+                          <span
+                            className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${ROLE_STYLES[myRole] ?? ROLE_STYLES.other}`}
+                          >
+                            {ROLE_LABELS[myRole] ?? myRole}
+                          </span>
+                        )}
+                        <span className="rounded-md bg-navy-50 px-2 py-0.5 text-xs font-medium text-navy-600">
+                          {inc.incident_type}
+                        </span>
+                      </div>
+                    </div>
+                    {inc.action_type && (
+                      <div className="mt-2">
+                        <ActionTag type={inc.action_type} />
+                      </div>
+                    )}
+                  </button>
+                );
               })}
             </div>
-          </div>
-
-          {/* 조치 유형 필터 */}
-          <div className="mb-2">
-            <p className="mb-1 text-xs font-medium text-gray-500">조치 유형</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ACTION_FILTERS.map((f) => {
-              const active = actionFilter === f.value;
-              return (
-                <button
-                  key={f.value}
-                  onClick={() => setActionFilter(f.value)}
-                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
-                    active
-                      ? 'border-navy-600 text-white'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                  }`}
-                  style={active ? { backgroundColor: '#1e3a5f' } : {}}
-                >
-                  {f.label}
-                </button>
-              );
-              })}
-            </div>
-          </div>
-
-          {/* 키워드 검색 */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-              placeholder="사건 내용 / 생활지도 내용 검색"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:border-navy-400"
-            />
-            {searchKeyword && (
-              <button
-                onClick={() => setSearchKeyword('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:bg-gray-100"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* 필터 초기화 */}
-          {hasActiveFilter && (
-            <button
-              onClick={resetFilters}
-              className="mt-2 flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
-            >
-              <X size={12} />
-              필터 초기화
-            </button>
           )}
         </div>
-
-        {/* 필터링된 사건 목록 */}
-        {filteredIncidents.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-400">
-            {hasActiveFilter ? '조건에 맞는 사건이 없습니다.' : '관련 사건 기록이 없습니다.'}
-          </p>
-        ) : (
-          <div className="space-y-2.5">
-            {filteredIncidents.map((inc) => (
-              <IncidentCard
-                key={inc.id}
-                incident={inc}
-                onClick={() =>
-                  navigate(`/incidents/${inc.id}`, {
-                    state: { fromStudentId: id },
-                  })
-                }
-                highlightKeyword={searchKeyword}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 text-center">
-      <p className={`text-2xl font-bold ${color ?? 'text-gray-800'}`}>{value}</p>
-      <p className="mt-0.5 text-xs text-gray-500">{label}</p>
+      </div>
     </div>
   );
 }

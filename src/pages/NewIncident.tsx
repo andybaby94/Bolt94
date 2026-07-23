@@ -18,6 +18,7 @@ import {
 import { nowKSTLocal, kstLocalToISO } from '@/lib/datetime';
 import { PageHeader } from '@/components/PageHeader';
 import { StudentSearchInput } from '@/components/StudentSearchInput';
+import { ROLE_STYLES } from '@/components/Tags';
 
 type LinkedStudent = {
   student: Student;
@@ -344,13 +345,14 @@ export function NewIncident() {
                     <div className="flex flex-wrap gap-1">
                       {ROLES.map((r) => {
                         const active = ls.role === r;
+                        const activeStyle = ROLE_STYLES[r] ?? ROLE_STYLES.other;
                         return (
                           <button
                             key={r}
                             onClick={() => changeRole(idx, r)}
                             className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
                               active
-                                ? 'border-navy-600 bg-navy-600 text-white'
+                                ? activeStyle
                                 : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                             }`}
                           >

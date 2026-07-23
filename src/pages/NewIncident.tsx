@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Check, AlertCircle } from 'lucide-react';
+import { X, Plus, AlertCircle } from 'lucide-react';
+import {
+  supabase,
+  INCIDENT_TYPES,
+  LOCATIONS,
+  ACTION_TYPES_ROW1,
+  ACTION_TYPES_ROW2,
+  ROLES,
+  ROLE_LABELS,
+  TIME_PERIODS_ROW1,
+  TIME_PERIODS_ROW2,
+  BREAKABLE_PERIODS,
+  buildTimePeriod,
+  type Student,
+} from '@/lib/supabase';
+import { nowKSTLocal, kstLocalToISO } from '@/lib/datetime';
 import { PageHeader } from '@/components/PageHeader';
 import { StudentSearchInput } from '@/components/StudentSearchInput';
 import { ROLE_STYLES } from '@/components/Tags';
-import {
-  supabase,
-  kstLocalToISO,
-  isoToKstLocal,
-  buildTimePeriod,
-  LOCATIONS,
-  INCIDENT_TYPES,
-  ACTION_TYPES,
-  TIME_PERIODS,
-  BREAKABLE_PERIODS,
-  ROLES,
-  ROLE_LABELS,
-  formatStudentLabel,
-  type Student,
-} from '@/lib/supabase';
 
 type LinkedStudent = {
   student: Student;
@@ -27,18 +27,17 @@ type LinkedStudent = {
 
 export function NewIncident() {
   const navigate = useNavigate();
-  const [occurredAt, setOccurredAt] = useState(isoToKstLocal(new Date().toISOString()));
-  const [location, setLocation] = useState('교실');
-  const [customLocation, setCustomLocation] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [description, setDescription] = useState('');
-  const [actionType, setActionType] = useState<string>('단순지도');
-  const [actionNote, setActionNote] = useState('');
+  const [occurredAt, setOccurredAt] = useState(nowKSTLocal());
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
   const [isBreak, setIsBreak] = useState(false);
+  const [location, setLocation] = useState('교실');
+  const [customLocation, setCustomLocation] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['수업방해']);
+  const [description, setDescription] = useState('');
+  const [actionType, setActionType] = useState<string | null>(null);
+  const [actionNote, setActionNote] = useState('');
   const [linkedStudents, setLinkedStudents] = useState<LinkedStudent[]>([]);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
   const [roleWarning, setRoleWarning] = useState(false);
 
   const canBreak = selectedPeriod !== null && BREAKABLE_PERIODS.includes(selectedPeriod);
@@ -48,28 +47,41 @@ export function NewIncident() {
   }, [canBreak]);
 
   function addStudent(student: Student) {
-    setLinkedStudents((prev) => {
-      if (prev.some((ls) => ls.student.id === student.id)) return prev;
-      return [...prev, { student, role: '' }];
-    });
+    if (linkedStudents.some((ls) => ls.student.id === student.id)) return;
+    setLinkedStudents([...linkedStudents, { student, role: '' }]);
+    setRoleWarning(false);
   }
 
   function removeStudent(idx: number) {
-    setLinkedStudents((prev) => prev.filter((_, i) => i !== idx));
+    setLinkedStudents(linkedStudents.filter((_, i) => i !== idx));
   }
 
   function changeRole(idx: number, role: string) {
-    setLinkedStudents((prev) => prev.map((ls, i) => (i === idx ? { ...ls, role } : ls)));
+    setLinkedStudents(
+      linkedStudents.map((ls, i) => (i === idx ? { ...ls, role } : ls))
+    );
+    setRoleWarning(false);
   }
 
-  function toggleType(t: string) {
-    setSelectedTypes((prev) =>
-      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
-    );
+  function toggleType(type: string) {
+    if (selectedTypes.includes(type)) {
+      setSelectedTypes(selectedTypes.filter((t) => t !== type));
+    } else {
+      setSelectedTypes([...selectedTypes, type]);
+    }
+  }
+
+  function toggleAction(type: string) {
+    if (type === '없음') {
+      setActionType(null);
+      return;
+    }
+    setActionType(actionType === type ? null : type);
   }
 
   async function handleSubmit() {
     if (description.trim().length === 0) return;
+
     const unassigned = linkedStudents.some((ls) => !ls.role);
     if (unassigned) {
       setRoleWarning(true);
@@ -77,13 +89,12 @@ export function NewIncident() {
     }
 
     setSaving(true);
-    setSaveError(false);
 
     const finalLocation = location === '기타' && customLocation.trim() ? customLocation.trim() : location;
     const timePeriod = buildTimePeriod(selectedPeriod, isBreak);
     const incidentType = selectedTypes.length > 0 ? selectedTypes.join(', ') : '기타';
 
-    const { data: incData, error: incError } = await supabase
+    const { data: inc } = await supabase
       .from('incidents')
       .insert({
         occurred_at: kstLocalToISO(occurredAt),
@@ -97,56 +108,45 @@ export function NewIncident() {
       .select()
       .single();
 
-    if (incError) {
-      setSaving(false);
-      setSaveError(true);
-      return;
-    }
-
-    if (linkedStudents.length > 0) {
-      const { error: linkError } = await supabase.from('incident_students').insert(
+    if (inc && linkedStudents.length > 0) {
+      await supabase.from('incident_students').insert(
         linkedStudents.map((ls) => ({
-          incident_id: incData.id,
+          incident_id: inc.id,
           student_id: ls.student.id,
           role: ls.role,
-        })),
+        }))
       );
-      if (linkError) {
-        setSaving(false);
-        setSaveError(true);
-        return;
-      }
     }
 
     setSaving(false);
-    navigate(`/incidents/${incData.id}`, { replace: true });
+    navigate('/');
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <PageHeader title="새 사건 기록" subtitle="사건 정보를 입력해주세요." />
+    <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
+      <PageHeader title="새 사건 기록" />
 
-      <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">발생 일시</label>
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">작성 일시</label>
           <input
             type="datetime-local"
             value={occurredAt}
             onChange={(e) => setOccurredAt(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-navy-400 focus:ring-1 focus:ring-navy-400"
           />
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">시간대</label>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {TIME_PERIODS.map((p) => {
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">발생 시간대</label>
+          <div className="flex flex-wrap gap-1.5">
+            {TIME_PERIODS_ROW1.map((p) => {
               const active = selectedPeriod === p;
               return (
                 <button
                   key={p}
-                  onClick={() => setSelectedPeriod(p)}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                  onClick={() => setSelectedPeriod(active ? null : p)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                     active
                       ? 'border-navy-600 bg-navy-600 text-white'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
@@ -157,33 +157,55 @@ export function NewIncident() {
               );
             })}
           </div>
-          <label className={`mt-3 flex items-center gap-2 text-sm ${canBreak ? 'text-gray-600' : 'text-gray-300'}`}>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {TIME_PERIODS_ROW2.map((p) => {
+              const active = selectedPeriod === p;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setSelectedPeriod(active ? null : p)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    active
+                      ? 'border-navy-600 bg-navy-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+          <label
+            className={`mt-2 flex items-center gap-2 text-xs ${
+              canBreak ? 'text-gray-600' : 'text-gray-300'
+            }`}
+          >
             <input
               type="checkbox"
               checked={isBreak}
               disabled={!canBreak}
               onChange={(e) => setIsBreak(e.target.checked)}
-              className="rounded"
+              className="h-3.5 w-3.5 rounded border-gray-300"
             />
             쉬는시간
           </label>
           {selectedPeriod && (
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-1.5 text-xs text-gray-400">
               저장될 시간대: {buildTimePeriod(selectedPeriod, isBreak) ?? selectedPeriod}
             </p>
           )}
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">장소</label>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">장소</label>
+          <div className="flex flex-wrap gap-1.5">
             {LOCATIONS.map((l) => {
               const active = location === l;
               return (
                 <button
                   key={l}
                   onClick={() => setLocation(l)}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                     active
                       ? 'border-navy-600 bg-navy-600 text-white'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
@@ -196,25 +218,24 @@ export function NewIncident() {
           </div>
           {location === '기타' && (
             <input
-              type="text"
               value={customLocation}
               onChange={(e) => setCustomLocation(e.target.value)}
               placeholder="장소 직접 입력"
-              className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-navy-400"
             />
           )}
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">사건 유형 (복수 선택 가능)</label>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">사건 유형 (복수 선택 가능)</label>
+          <div className="flex flex-wrap gap-1.5">
             {INCIDENT_TYPES.map((t) => {
               const active = selectedTypes.includes(t);
               return (
                 <button
                   key={t}
                   onClick={() => toggleType(t)}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                     active
                       ? 'border-navy-600 bg-navy-600 text-white'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
@@ -227,113 +248,141 @@ export function NewIncident() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">사건 내용</label>
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">사건 내용</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            placeholder="사건 내용을 입력해주세요."
+            placeholder="사건 내용을 입력하세요"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-navy-400"
           />
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">조치 유형</label>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {ACTION_TYPES.map((t) => {
-              const active = actionType === t;
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">조치 유형</label>
+          <div className="flex flex-wrap gap-1.5">
+            {ACTION_TYPES_ROW1.map((a) => {
+              const isNone = a === '없음';
+              const active = isNone ? actionType === null : actionType === a;
               return (
                 <button
-                  key={t}
-                  onClick={() => setActionType(t)}
-                  className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                  key={a}
+                  onClick={() => toggleAction(a)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                     active
-                      ? 'border-navy-600 bg-navy-600 text-white'
+                      ? 'border-navy-600 text-white'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}
+                  style={active && !isNone ? { backgroundColor: '#1e3a5f' } : active && isNone ? { backgroundColor: '#6b7280' } : {}}
                 >
-                  {t}
+                  {a}
                 </button>
               );
             })}
           </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {ACTION_TYPES_ROW2.map((a) => {
+              const active = actionType === a;
+              return (
+                <button
+                  key={a}
+                  onClick={() => toggleAction(a)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    active
+                      ? 'border-navy-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                  style={active ? { backgroundColor: '#1e3a5f' } : {}}
+                >
+                  {a}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">생활지도 내용 (선택)</label>
           <textarea
             value={actionNote}
             onChange={(e) => setActionNote(e.target.value)}
-            rows={2}
-            className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            placeholder="생활지도 내용 (선택)"
+            rows={3}
+            placeholder="생활지도 내용을 입력하세요 (선택)"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-navy-400"
           />
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <label className="text-xs font-medium text-gray-400">관련 학생</label>
-          <div className="mt-2">
-            <StudentSearchInput onSelect={addStudent} excludeIds={linkedStudents.map((ls) => ls.student.id)} />
-          </div>
-          {linkedStudents.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {linkedStudents.map((ls, idx) => (
-                <div key={ls.student.id} className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                  <span className="flex-1 text-sm text-gray-700">{formatStudentLabel(ls.student)}</span>
-                  <div className="flex gap-1">
-                    {ROLES.map((r) => {
-                      const active = ls.role === r;
-                      const activeStyle = ROLE_STYLES[r] ?? ROLE_STYLES.other;
-                      return (
-                        <button
-                          key={r}
-                          onClick={() => changeRole(idx, r)}
-                          className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
-                            active
-                              ? activeStyle
-                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                          }`}
-                        >
-                          {ROLE_LABELS[r]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button onClick={() => removeStudent(idx)} className="text-gray-400 hover:text-red-500">
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">관련 학생</label>
+          <StudentSearchInput
+            onSelect={addStudent}
+            placeholder="학생 이름 검색 후 Enter 또는 클릭하여 추가"
+            excludeIds={linkedStudents.map((ls) => ls.student.id)}
+          />
+
           {roleWarning && (
             <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
               <AlertCircle size={14} />
               역할이 선택되지 않은 학생이 있습니다. 역할을 선택해주세요.
             </div>
           )}
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSubmit}
-            disabled={saving || description.trim().length === 0}
-            className="flex items-center gap-1 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition disabled:opacity-50"
-            style={{ backgroundColor: '#1e3a5f' }}
-          >
-            <Check size={18} />
-            {saving ? '저장 중...' : '저장'}
-          </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:border-gray-300"
-          >
-            취소
-          </button>
-          {saveError && (
-            <div className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-              <AlertCircle size={14} />
-              저장 중 오류가 발생했습니다. 다시 시도해주세요.
+          {linkedStudents.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              {linkedStudents.map((ls, idx) => (
+                <div
+                  key={`${ls.student.id}-${idx}`}
+                  className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2"
+                >
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm text-gray-800">
+                      {ls.student.name}
+                      <span className="ml-1 text-xs text-gray-400">
+                        ({ls.student.grade}학년 {ls.student.class_number}반 {ls.student.student_number}번)
+                      </span>
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {ROLES.map((r) => {
+                        const active = ls.role === r;
+                        const activeStyle = ROLE_STYLES[r] ?? ROLE_STYLES.other;
+                        return (
+                          <button
+                            key={r}
+                            onClick={() => changeRole(idx, r)}
+                            className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+                              active
+                                ? activeStyle
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {ROLE_LABELS[r]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeStudent(idx)}
+                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={saving || description.trim().length === 0}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl py-3.5 text-sm font-semibold text-white transition disabled:opacity-50"
+          style={{ backgroundColor: '#1e3a5f' }}
+        >
+          <Plus size={18} />
+          {saving ? '저장 중...' : '사건 기록 저장'}
+        </button>
       </div>
     </div>
   );

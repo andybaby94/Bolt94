@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FileText, Pencil, Trash2 } from 'lucide-react';
 import {
   supabase,
@@ -12,6 +12,8 @@ import { PageHeader } from '@/components/PageHeader';
 export function IncidentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromStudentId = (location.state as { fromStudentId?: string } | null)?.fromStudentId;
   const [incident, setIncident] = useState<IncidentWithStudents | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -111,7 +113,11 @@ export function IncidentDetail() {
 
       <div className="mt-3 flex gap-2">
         <button
-          onClick={() => navigate(`/incidents/${incident.id}/edit`)}
+          onClick={() =>
+            navigate(`/incidents/${incident.id}/edit`, {
+              state: { fromStudentId },
+            })
+          }
           className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           <Pencil size={16} />

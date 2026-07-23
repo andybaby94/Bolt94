@@ -307,7 +307,11 @@ export function StudentDetail() {
               <IncidentCard
                 key={inc.id}
                 incident={inc}
-                onClick={() => navigate(`/incidents/${inc.id}`)}
+                onClick={() =>
+                  navigate(`/incidents/${inc.id}`, {
+                    state: { fromStudentId: id },
+                  })
+                }
                 highlightKeyword={searchKeyword}
               />
             ))}

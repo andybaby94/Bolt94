@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { X, Check, AlertCircle } from 'lucide-react';
 import {
   supabase,
@@ -31,6 +31,8 @@ type LinkedStudent = {
 export function EditIncident() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const fromStudentId = (routeLocation.state as { fromStudentId?: string } | null)?.fromStudentId;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -193,7 +195,11 @@ export function EditIncident() {
     }
 
     setSaving(false);
-    navigate(`/incidents/${id}`, { replace: true });
+    if (fromStudentId) {
+      navigate(`/students/${fromStudentId}`, { replace: true });
+    } else {
+      navigate(`/incidents/${id}`, { replace: true });
+    }
   }
 
   if (loading) {

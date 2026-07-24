@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
-import { supabase, type Student } from '@/lib/supabase';
+import { Search, Plus } from 'lucide-react';
+import { supabase, formatStudentInfo, type Student } from '@/lib/supabase';
 import { PageHeader } from '@/components/PageHeader';
 
 export function StudentList() {
@@ -15,6 +15,7 @@ export function StudentList() {
       const { data } = await supabase
         .from('students')
         .select('*')
+        .eq('is_active', true)
         .order('grade')
         .order('class_number')
         .order('student_number');
@@ -41,6 +42,16 @@ export function StudentList() {
         />
       </div>
 
+      <div className="mb-4">
+        <button
+          onClick={() => navigate('/students/new')}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-700 transition hover:border-gray-300"
+        >
+          <Plus size={18} className="text-gray-400" />
+          학생 등록
+        </button>
+      </div>
+
       {loading ? (
         <p className="py-8 text-center text-sm text-gray-400">불러오는 중...</p>
       ) : filtered.length === 0 ? (
@@ -55,7 +66,7 @@ export function StudentList() {
             >
               <span className="text-sm font-medium text-gray-800">{s.name}</span>
               <span className="text-xs text-gray-500">
-                {s.grade}학년 {s.class_number}반 {s.student_number}번
+                {formatStudentInfo(s)}
               </span>
             </button>
           ))}

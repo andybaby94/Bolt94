@@ -8,11 +8,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export type Student = {
   id: string;
   name: string;
-  grade: number;
-  class_number: number;
-  student_number: number;
+  grade: number | null;
+  class_number: number | null;
+  student_number: number | null;
+  gender: string | null;
+  is_active: boolean;
   created_at: string;
 };
+
+export function formatStudentInfo(s: Pick<Student, 'grade' | 'class_number' | 'student_number'>): string {
+  const parts: string[] = [];
+  if (s.grade != null) parts.push(`${s.grade}학년`);
+  if (s.class_number != null) parts.push(`${s.class_number}반`);
+  if (s.student_number != null) parts.push(`${s.student_number}번`);
+  return parts.join(' ');
+}
 
 export type Incident = {
   id: string;

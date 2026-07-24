@@ -15,6 +15,7 @@ import {
   buildTimePeriod,
   parseTimePeriod,
   parseIncidentTypes,
+  formatStudentInfo,
   type Student,
   type IncidentWithStudents,
 } from '@/lib/supabase';
@@ -395,7 +396,7 @@ export function EditIncident() {
                     <span className="text-sm text-gray-800">
                       {ls.student.name}
                       <span className="ml-1 text-xs text-gray-400">
-                        ({ls.student.grade}학년 {ls.student.class_number}반 {ls.student.student_number}번)
+                        ({formatStudentInfo(ls.student)})
                       </span>
                     </span>
                     <div className="flex flex-wrap gap-1">

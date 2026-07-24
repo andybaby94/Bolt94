@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Search } from 'lucide-react';
-import { supabase, type Student } from '@/lib/supabase';
+import { supabase, formatStudentInfo, type Student } from '@/lib/supabase';
 
 export function StudentSearchInput({
   onSelect,
@@ -28,6 +28,7 @@ export function StudentSearchInput({
     supabase
       .from('students')
       .select('*')
+      .eq('is_active', true)
       .ilike('name', `%${value.trim()}%`)
       .limit(10)
       .then(({ data }) => {
@@ -120,7 +121,7 @@ export function StudentSearchInput({
             >
               <span className="font-medium text-gray-800">{s.name}</span>
               <span className="text-xs text-gray-500">
-                {s.grade}학년 {s.class_number}반 {s.student_number}번
+                {formatStudentInfo(s)}
               </span>
             </button>
           ))}

@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { Search, X, Pencil, UserX } from 'lucide-react';
 import {
   supabase,
+  formatStudentInfo,
   type Student,
   type IncidentWithStudents,
 } from '@/lib/supabase';
@@ -174,8 +175,32 @@ export function StudentDetail() {
         <div className="flex items-baseline gap-2">
           <h2 className="text-xl font-bold text-gray-800">{student.name}</h2>
           <span className="text-sm text-gray-500">
-            {student.grade}학년 {student.class_number}반 {student.student_number}번
+            {formatStudentInfo(student)}
           </span>
+          {student.gender && (
+            <span className="text-sm text-gray-500">{student.gender}</span>
+          )}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={() => navigate(`/students/${id}/edit`)}
+            className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
+          >
+            <Pencil size={14} />
+            수정
+          </button>
+          <button
+            onClick={async () => {
+              if (!id) return;
+              if (!confirm('이 학생을 비활성화하시겠습니까?\n기존 사건 기록은 유지됩니다.')) return;
+              await supabase.from('students').update({ is_active: false }).eq('id', id);
+              navigate('/students');
+            }}
+            className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
+          >
+            <UserX size={14} />
+            비활성화
+          </button>
         </div>
       </div>
 

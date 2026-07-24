@@ -32,7 +32,7 @@ export function NewIncident() {
   const [isBreak, setIsBreak] = useState(false);
   const [location, setLocation] = useState('교실');
   const [customLocation, setCustomLocation] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['수업방해']);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(['수업·학습 방해']);
   const [description, setDescription] = useState('');
   const [actionType, setActionType] = useState<string | null>(null);
   const [actionNote, setActionNote] = useState('');

@@ -51,10 +51,9 @@ export type IncidentWithStudents = Incident & {
 };
 
 export const INCIDENT_TYPES = [
-  '수업방해',
+  '수업·학습 방해',
   '신체충돌',
-  '교우관계',
-  '생활습관',
+  '언어행동',
   '기타',
 ];
 
@@ -75,7 +74,7 @@ export const ROLE_LABELS: Record<string, string> = {
 export const TIME_PERIODS_ROW1 = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시'];
 export const TIME_PERIODS_ROW2 = ['아침시간', '점심시간', '하교시간'];
 
-export const PERIODS_WITH_BREAK = ['아침시간', '1교시', '2교시', '3교시', '4교시', '5교시', '6교시'];
+export const PERIODS_WITH_BREAK = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시'];
 
 export function buildTimePeriod(period: string | null, isBreak: boolean): string | null {
   if (!period) return null;

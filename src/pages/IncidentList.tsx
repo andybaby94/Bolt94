@@ -5,8 +5,6 @@ import {
   supabase,
   type IncidentWithStudents,
   INCIDENT_TYPES,
-  ROLES,
-  ROLE_LABELS,
 } from '@/lib/supabase';
 import { isTodayKST } from '@/lib/datetime';
 import { PageHeader } from '@/components/PageHeader';
@@ -46,7 +44,6 @@ export function IncidentList() {
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('');
 
   useEffect(() => {
     (async () => {
@@ -84,19 +81,13 @@ export function IncidentList() {
         return isWithinDaysKST(i.occurred_at, 30);
       });
     }
-    if (roleFilter) {
-      result = result.filter((i) =>
-        (i.incident_students ?? []).some((is) => is.role === roleFilter),
-      );
-    }
     return result;
-  }, [incidents, query, typeFilter, periodFilter, roleFilter]);
+  }, [incidents, query, typeFilter, periodFilter]);
 
   const isFiltered =
     query.trim() !== '' ||
     typeFilter !== '' ||
-    periodFilter !== 'all' ||
-    roleFilter !== '';
+    periodFilter !== 'all';
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
@@ -155,32 +146,6 @@ export function IncidentList() {
             }`}
           >
             {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-4 flex flex-wrap gap-1.5">
-        <button
-          onClick={() => setRoleFilter('')}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-            roleFilter === ''
-              ? 'border-navy-600 bg-navy-600 text-white'
-              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-          }`}
-        >
-          전체
-        </button>
-        {ROLES.map((r) => (
-          <button
-            key={r}
-            onClick={() => setRoleFilter(roleFilter === r ? '' : r)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-              roleFilter === r
-                ? 'border-navy-600 bg-navy-600 text-white'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-            }`}
-          >
-            {ROLE_LABELS[r]}
           </button>
         ))}
       </div>

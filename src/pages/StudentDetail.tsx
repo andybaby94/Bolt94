@@ -265,9 +265,9 @@ export function StudentDetail() {
             </div>
           </div>
 
-          {/* 조치 유형 필터 */}
+          {/* 지도·조치 유형 필터 */}
           <div className="mb-2">
-            <p className="mb-1 text-xs font-medium text-gray-500">조치 유형</p>
+            <p className="mb-1 text-xs font-medium text-gray-500">지도·조치 유형</p>
             <div className="flex flex-wrap gap-1.5">
               {ACTION_FILTERS.map((f) => {
               const active = actionFilter === f.value;
@@ -295,7 +295,7 @@ export function StudentDetail() {
             <input
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
-              placeholder="사건 내용 / 생활지도 내용 검색"
+              placeholder="사건 내용 / 지도·조치 내용 검색"
               className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:border-navy-400"
             />
             {searchKeyword && (

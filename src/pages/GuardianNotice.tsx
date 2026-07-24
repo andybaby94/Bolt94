@@ -94,7 +94,7 @@ export function GuardianNotice() {
           </div>
           {incident.action_type && (
             <div className="flex">
-              <span className="w-24 shrink-0 font-medium text-gray-500">조치 유형</span>
+              <span className="w-24 shrink-0 font-medium text-gray-500">지도·조치 유형</span>
               <span>{incident.action_type}</span>
             </div>
           )}
@@ -109,7 +109,7 @@ export function GuardianNotice() {
 
         {incident.action_note && (
           <div className="mt-5">
-            <p className="mb-1 text-sm font-medium text-gray-500">생활지도 내용</p>
+            <p className="mb-1 text-sm font-medium text-gray-500">지도·조치 내용</p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
               {incident.action_note}
             </p>

@@ -324,7 +324,7 @@ export function EditIncident() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">조치 유형</label>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">지도·조치 유형</label>
           <div className="flex flex-wrap gap-1.5">
             {ACTION_TYPES_ROW1.map((a) => {
               const isNone = a === '없음';
@@ -367,12 +367,12 @@ export function EditIncident() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">생활지도 내용 (선택)</label>
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">지도·조치 내용 (선택)</label>
           <textarea
             value={actionNote}
             onChange={(e) => setActionNote(e.target.value)}
             rows={3}
-            placeholder="생활지도 내용을 입력하세요 (선택)"
+            placeholder="지도·조치 내용을 입력하세요 (선택)"
             className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-navy-400"
           />
         </div>

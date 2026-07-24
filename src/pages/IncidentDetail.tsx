@@ -84,7 +84,7 @@ export function IncidentDetail() {
 
         {incident.action_note && (
           <div className="mt-4 rounded-lg bg-gray-50 p-3">
-            <p className="text-xs font-medium text-gray-500">생활지도 내용</p>
+            <p className="text-xs font-medium text-gray-500">지도·조치 내용</p>
             <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
               {incident.action_note}
             </p>

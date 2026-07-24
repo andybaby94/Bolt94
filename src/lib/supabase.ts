@@ -60,7 +60,7 @@ export const INCIDENT_TYPES = [
 
 export const LOCATIONS = ['교실', '복도', '특별실', '화장실', '기타'];
 
-export const ACTION_TYPES_ROW1 = ['없음', '단순지도', '개별상담'];
+export const ACTION_TYPES_ROW1 = ['없음', '단순지도', '개별지도', '심층상담'];
 export const ACTION_TYPES_ROW2 = ['제1호-가목', '제1호-나목', '제2호-가목', '제2호-나목'];
 
 export const ROLES = ['actor', 'victim', 'witness', 'other'];

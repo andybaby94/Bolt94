@@ -132,19 +132,21 @@ export function GuardianNotice() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-4">
-      <PageHeader
-        title="보호자 통지서"
-        rightSlot={
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: '#1e3a5f' }}
-          >
-            <Printer size={16} />
-            인쇄
-          </button>
-        }
-      />
+      <div className="no-print">
+        <PageHeader
+          title="보호자 통지서"
+          rightSlot={
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white"
+              style={{ backgroundColor: '#1e3a5f' }}
+            >
+              <Printer size={16} />
+              인쇄
+            </button>
+          }
+        />
+      </div>
 
       <div className="print-area rounded-xl border border-gray-200 bg-white p-8">
         <div className="mb-6 text-center">
@@ -213,7 +215,6 @@ export function GuardianNotice() {
         {actorStudents.length > 0 && (
           <div className="mt-5">
             <p className="mb-1 text-sm font-medium text-gray-500">최근 행동 기록</p>
-            <p className="mb-1 text-xs text-gray-400">행동학생으로 접수된 사건 기준</p>
             <div className="text-sm text-gray-800">
               {actorStudents.map((is) => (
                 <div key={is.id}>

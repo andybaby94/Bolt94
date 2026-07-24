@@ -20,5 +20,29 @@ body {
   .print-area {
     box-shadow: none !important;
     border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  @page {
+    margin: 12mm 14mm;
+  }
+  .print-area {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .print-area > * + * {
+    margin-top: 0.75rem;
+  }
+  .print-area .mt-5,
+  .print-area .mt-6,
+  .print-area .mt-8 {
+    margin-top: 0.6rem !important;
+  }
+  .print-area .mb-6 {
+    margin-bottom: 0.75rem !important;
+  }
+  .print-area p {
+    margin-top: 0.1rem;
+    margin-bottom: 0.1rem;
   }
 }

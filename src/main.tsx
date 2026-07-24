@@ -9,6 +9,7 @@ import { StudentList } from '@/pages/StudentList';
 import { StudentDetail } from '@/pages/StudentDetail';
 import { StudentForm } from '@/pages/StudentForm';
 import { GuardianNotice } from '@/pages/GuardianNotice';
+import { IncidentList } from '@/pages/IncidentList';
 import '@/index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/incidents/:id/edit" element={<EditIncident />} />
         <Route path="/incidents/:id" element={<IncidentDetail />} />
         <Route path="/incidents/:id/notice" element={<GuardianNotice />} />
+        <Route path="/incidents/all" element={<IncidentList />} />
         <Route path="/students" element={<StudentList />} />
         <Route path="/students/new" element={<StudentForm />} />
         <Route path="/students/:id/edit" element={<StudentForm />} />

@@ -52,8 +52,9 @@ export type IncidentWithStudents = Incident & {
 
 export const INCIDENT_TYPES = [
   '수업·학습 방해',
-  '신체충돌',
-  '언어행동',
+  '신체적 행동',
+  '언어적 행동',
+  '규칙·질서 위반',
   '기타',
 ];
 

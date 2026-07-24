@@ -28,6 +28,13 @@ type LinkedStudent = {
   role: string;
 };
 
+const ROLE_ACTIVE_STYLES: Record<string, string> = {
+  actor: 'border-red-200 bg-red-50 text-red-700',
+  victim: 'border-blue-200 bg-blue-50 text-blue-700',
+  witness: 'border-green-200 bg-green-50 text-green-700',
+  other: 'border-gray-200 bg-gray-100 text-gray-700',
+};
+
 export function EditIncident() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -408,7 +415,7 @@ export function EditIncident() {
                             onClick={() => changeRole(idx, r)}
                             className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
                               active
-                                ? 'border-navy-600 bg-navy-600 text-white'
+                                ? ROLE_ACTIVE_STYLES[r]
                                 : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                             }`}
                           >
